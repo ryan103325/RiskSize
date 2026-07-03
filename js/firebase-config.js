@@ -6,12 +6,13 @@
 // 資料只存在瀏覽器的 localStorage，功能完全正常，只是不能跨裝置同步。
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBg2zel9db4LmZBIqjDcHa9vcpBHxtFHfQ",
+  authDomain: "risksize-261cf.firebaseapp.com",
+  projectId: "risksize-261cf",
+  storageBucket: "risksize-261cf.firebasestorage.app",
+  messagingSenderId: "1005342520959",
+  appId: "1:1005342520959:web:d46246fb76e96a92d7b14a",
+  measurementId: "G-4GEKXKGB4H"
 };
 
 export const isFirebaseConfigured = () =>

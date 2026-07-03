@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RiskSize｜台股當沖倉位計算器</title>
+  <meta name="description" content="台股現股當沖風控倉位計算器：依風險金額與止損距離計算可持有張數，已含手續費與當沖證交稅。" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">📐</span>
+      <div>
+        <h1>RiskSize</h1>
+        <p class="subtitle">台股現股當沖・風控倉位計算器</p>
+      </div>
+    </div>
+    <div id="auth-area" class="auth-area"></div>
+  </header>
+
+  <main>
+    <!-- 計算輸入 -->
+    <section class="card">
+      <h2>試算條件</h2>
+      <form id="calc-form" novalidate>
+        <div class="dir-toggle" role="group" aria-label="交易方向">
+          <button type="button" class="dir-btn long active" data-dir="long">做多</button>
+          <button type="button" class="dir-btn short" data-dir="short">做空</button>
+        </div>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>風險金額（千元）<em class="req">*</em></span>
+            <input id="risk" type="number" inputmode="decimal" min="0" step="0.1" placeholder="例：10 = 一萬元" required />
+            <small id="risk-hint" class="hint"></small>
+          </label>
+          <label class="field">
+            <span>進場價<em class="req">*</em></span>
+            <input id="entry" type="number" inputmode="decimal" min="0" step="0.01" placeholder="做多=買入價，做空=放空價" required />
+          </label>
+          <label class="field">
+            <span>止損價<em class="req">*</em></span>
+            <input id="stop" type="number" inputmode="decimal" min="0" step="0.01" placeholder="觸價出場價位" required />
+          </label>
+          <label class="field">
+            <span>盈虧比</span>
+            <input id="rr" type="number" inputmode="decimal" min="0.1" step="0.1" value="2" />
+            <small class="hint">用於反推止盈價位</small>
+          </label>
+          <label class="field">
+            <span>手續費折數</span>
+            <input id="fee-discount" type="number" inputmode="decimal" min="1" max="10" step="0.1" value="6" />
+            <small class="hint">1～10 折，例：6 = 六折</small>
+          </label>
+        </div>
+
+        <div id="error-box" class="error-box" hidden></div>
+        <button type="submit" class="primary-btn">計算倉位</button>
+      </form>
+    </section>
+
+    <!-- 計算結果 -->
+    <section id="results" class="card results" hidden>
+      <h2>計算結果</h2>
+      <div class="result-grid">
+        <div class="result-item highlight">
+          <span class="label">可持有張數</span>
+          <span id="r-lots" class="value big"></span>
+        </div>
+        <div class="result-item">
+          <span class="label">部位所需資金</span>
+          <span id="r-capital" class="value"></span>
+        </div>
+        <div class="result-item">
+          <span class="label">止盈價位</span>
+          <span id="r-target" class="value"></span>
+        </div>
+        <div class="result-item">
+          <span class="label">實際動用風險金額</span>
+          <span id="r-risk" class="value"></span>
+          <small id="r-risk-diff" class="hint"></small>
+        </div>
+        <div class="result-item">
+          <span class="label">預期虧損（含費用）</span>
+          <span id="r-loss" class="value loss"></span>
+        </div>
+        <div class="result-item">
+          <span class="label">預期浮盈（含費用）</span>
+          <span id="r-profit" class="value profit"></span>
+        </div>
+      </div>
+      <p id="r-meta" class="meta"></p>
+      <div id="r-warnings" class="warn-box"></div>
+      <p class="disclaimer">本結果未計入滑價與實際成交價落差，當沖急殺 / 急拉時實際虧損可能高於顯示值，僅供參考。</p>
+      <button id="save-record" class="secondary-btn">💾 儲存這筆試算</button>
+    </section>
+
+    <!-- 歷史紀錄 -->
+    <section class="card">
+      <div class="card-head">
+        <h2>歷史紀錄</h2>
+        <div class="head-actions">
+          <button id="export-csv" class="ghost-btn">匯出 CSV</button>
+          <button id="clear-history" class="ghost-btn danger">清空</button>
+        </div>
+      </div>
+      <p id="history-empty" class="empty-hint">尚無紀錄。計算後按「儲存這筆試算」即可留存，登入後可跨裝置同步。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>時間</th><th>方向</th><th>進場</th><th>止損</th><th>止盈</th>
+              <th>張數</th><th>實際風險</th><th>預期浮盈</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 設定 -->
+    <details class="card settings">
+      <summary><h2>⚙️ 費率與預設值設定</h2></summary>
+      <div class="field-grid">
+        <label class="field">
+          <span>單邊手續費率基準（%）</span>
+          <input id="set-base-fee" type="number" step="0.0001" value="0.1425" />
+          <small class="hint">台股公定 0.1425%，實付 = 基準 × 折數/10</small>
+        </label>
+        <label class="field">
+          <span>當沖證交稅率（%）</span>
+          <input id="set-tax" type="number" step="0.01" value="0.15" />
+          <small class="hint">優惠稅率 0.15% 適用至民國 116 年底，到期後請改為 0.3</small>
+        </label>
+        <label class="field">
+          <span>預設盈虧比</span>
+          <input id="set-default-rr" type="number" step="0.1" value="2" />
+        </label>
+        <label class="field">
+          <span>預設手續費折數</span>
+          <input id="set-default-discount" type="number" min="1" max="10" step="0.1" value="6" />
+        </label>
+      </div>
+      <p class="hint">設定會自動記憶在此瀏覽器；登入後同步到雲端。</p>
+    </details>
+  </main>
+
+  <footer>
+    <p>適用範圍：台股現股當沖。不含期貨、選擇權與零股；不檢查當沖額度與平盤下放空限制。</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -154,7 +154,7 @@ function runCalculation() {
   $('r-loss').textContent = '-' + fmtMoney(r.expectedLoss);
   $('r-profit').textContent = '+' + fmtMoney(r.expectedProfit);
   $('r-meta').textContent =
-    `${dirLabel}｜止損距離 ${fmtPrice(r.stopDistance)} 元｜單張總風險 ${fmtMoney(r.totalRiskPerLot)}｜單邊手續費率 ${(r.feeRate * 100).toFixed(4)}%`;
+    `${dirLabel}｜止損距離 ${fmtPrice(r.stopDistance)} 元｜單張總風險 ${fmtMoney(r.totalRiskPerLot)}｜單邊手續費率 ${(r.feeRate * 100).toFixed(4)}%｜止盈價已含費用反推，淨盈虧比 = 1:${inputs.rr}`;
   $('r-warnings').innerHTML = (r.warnings || []).map((w) => `<div>⚠ ${w}</div>`).join('');
   el.results.hidden = false;
 

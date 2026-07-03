@@ -67,21 +67,20 @@ export function calculate(inputs, rates = DEFAULT_RATES) {
     };
   }
 
-  // 止盈價位（依盈虧比反推）
-  const target = isLong ? entry + rr * stopDistance : entry - rr * stopDistance;
+  // 止盈價位：以「扣除費用後的淨損益」反推，使 淨獲利 = 盈虧比 × 淨虧損。
+  // 做多解 (T−進場) − 進場×費率 − T×(費率+稅率) = rr × 單股總風險
+  // 做空解 (進場−T) − 進場×(費率+稅率) − T×費率 = rr × 單股總風險
+  const riskPerShare = totalRiskPerLot / 1000; // 單股總風險（止損距離 + 費用）
+  const target = isLong
+    ? (entry * (1 + feeRate) + rr * riskPerShare) / (1 - feeRate - taxRate)
+    : (entry * (1 - feeRate - taxRate) - rr * riskPerShare) / (1 + feeRate);
 
   const capitalRequired = lots * entry * 1000;      // 部位所需資金（元）
   const actualRisk = lots * totalRiskPerLot;        // 實際動用風險金額（元）
   const riskDiff = riskBudget - actualRisk;         // 與設定風險金額的差額
 
-  // 止盈出場單股成本
-  const tpCostPerShare = isLong
-    ? target * (feeRate + taxRate) + entry * feeRate
-    : entry * (feeRate + taxRate) + target * feeRate;
-
-  const tpCostPerLot = tpCostPerShare * 1000;       // 單張止盈成本（元）
-  const tpGrossPerLot = rr * stopDistance * 1000;   // 單張止盈毛利（元）
-  const expectedProfit = lots * (tpGrossPerLot - tpCostPerLot); // 預期浮盈（元）
+  // 止盈價已含費用反推，故淨浮盈精確等於 盈虧比 × 實際動用風險
+  const expectedProfit = rr * actualRisk;
 
   return {
     lots,
@@ -95,5 +94,6 @@ export function calculate(inputs, rates = DEFAULT_RATES) {
     feeRate,
     stopDistance,
     warnings: target <= 0 ? ['以此盈虧比反推的止盈價位為負值或零，請確認盈虧比與止損距離'] : [],
+    netRR: rr, // 含費用後的淨盈虧比（止盈價已依此反推）
   };
 }

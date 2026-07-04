@@ -153,8 +153,9 @@ function runCalculation() {
   $('r-target').textContent = fmtPrice(r.target);
   $('r-loss').textContent = '-' + fmtMoney(r.expectedLoss);
   $('r-profit').textContent = '+' + fmtMoney(r.expectedProfit);
+  const actualNetRR = r.expectedProfit / r.actualRisk; // 由輸出驗算的稅後費後盈虧比
   $('r-meta').textContent =
-    `${dirLabel}｜止損距離 ${fmtPrice(r.stopDistance)} 元｜單張總風險 ${fmtMoney(r.totalRiskPerLot)}｜單邊手續費率 ${(r.feeRate * 100).toFixed(4)}%｜止盈價已含費用反推，淨盈虧比 = 1:${inputs.rr}`;
+    `${dirLabel}｜止損距離 ${fmtPrice(r.stopDistance)} 元｜單張總風險（含費）${fmtMoney(r.totalRiskPerLot)}｜單邊手續費率 ${(r.feeRate * 100).toFixed(4)}%｜實際淨盈虧比 = 1:${actualNetRR.toFixed(2)}（虧損含費用、獲利扣費用）`;
   $('r-warnings').innerHTML = (r.warnings || []).map((w) => `<div>⚠ ${w}</div>`).join('');
   el.results.hidden = false;
 
@@ -227,6 +228,22 @@ function exportCsv() {
 
 // ---------- 登入 / 雲端同步 ----------
 
+const AUTH_ERROR_HINTS = {
+  'auth/api-key-not-valid': 'Firebase API 金鑰無效。請到 Firebase Console → 專案設定 → 一般 → 你的應用程式，重新複製 firebaseConfig 貼到 js/firebase-config.js（若剛更新過設定，請按 Ctrl+Shift+R 強制重新整理清除快取）',
+  'auth/unauthorized-domain': '此網域尚未授權。請到 Firebase Console → Authentication → 設定 → 授權網域，加入本網站網域',
+  'auth/operation-not-allowed': 'Google 登入尚未啟用。請到 Firebase Console → Authentication → 登入方式，啟用 Google',
+  'auth/configuration-not-found': 'Firebase Authentication 尚未初始化。請到 Firebase Console → Authentication 按「開始使用」',
+  'auth/popup-blocked': '瀏覽器封鎖了登入視窗，請允許彈出式視窗後重試',
+  'auth/popup-closed-by-user': '登入視窗被關閉，未完成登入',
+  'auth/network-request-failed': '網路連線失敗，請檢查網路後重試',
+};
+
+function friendlyAuthError(e) {
+  const code = (e && e.code) || '';
+  const key = Object.keys(AUTH_ERROR_HINTS).find((k) => code.startsWith(k));
+  return key ? AUTH_ERROR_HINTS[key] : (e && e.message) || String(e);
+}
+
 function renderAuth() {
   if (!cloudEnabled) {
     el.authArea.innerHTML = '<span class="guest-badge" title="尚未設定 Firebase，資料僅存於此瀏覽器（見 README）">訪客模式</span>';
@@ -240,7 +257,7 @@ function renderAuth() {
     $('logout-btn').addEventListener('click', () => signOutUser());
   } else {
     el.authArea.innerHTML = '<button id="login-btn" class="ghost-btn">使用 Google 登入</button>';
-    $('login-btn').addEventListener('click', () => signIn().catch((e) => alert('登入失敗：' + e.message)));
+    $('login-btn').addEventListener('click', () => signIn().catch((e) => alert('登入失敗：' + friendlyAuthError(e))));
   }
 }
 

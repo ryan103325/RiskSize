@@ -21,6 +21,30 @@
 
 登入帳號後，設定與歷史紀錄可跨裝置同步；未登入則資料只存在目前使用的瀏覽器。
 
+## Firebase 設定（啟用帳號登入 + 雲端同步）
+
+1. 到 [Firebase Console](https://console.firebase.google.com) 建立專案
+2. 專案設定 → 一般 → 你的應用程式 → 新增網頁應用程式，把產生的 `firebaseConfig` 貼到 `js/firebase-config.js`
+3. Authentication → 登入方式 → 啟用 **Google**；並在「設定 → 授權網域」加入你的網站網域
+4. Firestore Database → 建立資料庫，**規則請使用本專案的 [`firestore.rules`](firestore.rules)**（見下方安全性說明）
+
+### 安全性規則（必設）
+
+`firebaseConfig` 裡的 `apiKey` 是公開識別碼、本來就會出現在前端程式碼中，**真正把關資料存取的是 Firestore 安全規則**。請到 Firestore Database → 規則，貼上：
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+這組規則確保每位使用者只能讀寫自己的資料（`users/{自己的 uid}`），其他路徑一律拒絕。**若當初建立 Firestore 時選了「測試模式」，請務必改成上面的規則**，否則任何人都能讀寫整個資料庫。
+
 ## 免責聲明
 
 本結果未計入滑價與實際成交價落差，當沖急殺 / 急拉時實際虧損可能高於顯示值，僅供參考。

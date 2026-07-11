@@ -250,11 +250,18 @@ function renderAuth() {
     return;
   }
   if (currentUser) {
+    // displayName / email 為外部帳號資料，用 textContent 寫入避免 HTML 注入
     const name = currentUser.displayName || currentUser.email || '已登入';
-    el.authArea.innerHTML = `
-      <span class="user-name" title="${currentUser.email || ''}">${name}</span>
-      <button id="logout-btn" class="ghost-btn">登出</button>`;
-    $('logout-btn').addEventListener('click', () => signOutUser());
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'user-name';
+    nameSpan.title = currentUser.email || '';
+    nameSpan.textContent = name;
+    const logoutBtn = document.createElement('button');
+    logoutBtn.id = 'logout-btn';
+    logoutBtn.className = 'ghost-btn';
+    logoutBtn.textContent = '登出';
+    el.authArea.replaceChildren(nameSpan, logoutBtn);
+    logoutBtn.addEventListener('click', () => signOutUser());
   } else {
     el.authArea.innerHTML = '<button id="login-btn" class="ghost-btn">使用 Google 登入</button>';
     $('login-btn').addEventListener('click', () => signIn().catch((e) => alert('登入失敗：' + friendlyAuthError(e))));
